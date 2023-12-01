@@ -22,8 +22,8 @@ jobs:
       - name: Github stuff
         run: echo "My Github repo is called ${{ github.repository }}"
 
-      - name: Read an env variable
-        run: echo "My APP_ID2 value is ${{ var.APP_ID2 }}"
+      # - name: Read an env variable
+      #   run: echo "My APP_ID2 value is ${{ var.APP_ID2 }}"
 
 
   top-secret-production:
