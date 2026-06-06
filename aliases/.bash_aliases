@@ -1,8 +1,18 @@
+#!/bin/bash
+
 #---------------------------------------------------------------------
 #
 # Basic Aliases
 #
 #---------------------------------------------------------------------
+
+# Source .env from easy-server directory
+if [ -f "$HOME/easy-server/.env" ]; then
+    source "$HOME/easy-server/.env"
+else
+    # Fallback para valor padrão se .env não existir
+    ALIAS_HOME_BASE_PATH="/opt"
+fi
 
 # Bash Aliases
 alias l='ls -la'
@@ -161,8 +171,6 @@ alias tor='cd ~/Downloads/tor && ./start-tor-browser.desktop && cd -'
 alias kiro='kiro-cli --tui --trust-all-tools'
 
 # Other Aliases
-ALIAS_HOME_BASE_PATH="/opt"
-
 alias gg='cd $ALIAS_HOME_BASE_PATH'             # Basedir
 alias ggs='cd $ALIAS_HOME_BASE_PATH/sites'      # Sites
 alias ggb='cd $ALIAS_HOME_BASE_PATH/backup'     # Backup
