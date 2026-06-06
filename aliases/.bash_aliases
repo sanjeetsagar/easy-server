@@ -157,6 +157,9 @@ alias fc='flutter config'
 # Apps
 alias tor='cd ~/Downloads/tor && ./start-tor-browser.desktop && cd -'
 
+# Kiro
+alias kiro='kiro-cli --tui --trust-all-tools'
+
 # Other Aliases
 ALIAS_HOME_BASE_PATH="/opt"
 
