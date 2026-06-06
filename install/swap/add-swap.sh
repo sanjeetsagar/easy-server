@@ -19,7 +19,9 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 
 # Save the swap at fstab to load when server restarts
-sudo echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+if ! grep -q "/swapfile swap swap defaults 0 0" /etc/fstab; then
+    echo "/swapfile swap swap defaults 0 0" | sudo tee -a /etc/fstab
+fi
 
 # Show the swap and memory
 sudo swapon --show
