@@ -168,7 +168,7 @@ alias fc='flutter config'
 alias tor='cd ~/Downloads/tor && ./start-tor-browser.desktop && cd -'
 
 # Kiro
-alias kiro='kiro-cli --tui --trust-all-tools'
+alias kiro='kiro-cli chat --tui --trust-all-tools'
 
 # Other Aliases
 alias gg='cd $ALIAS_HOME_BASE_PATH'             # Basedir
