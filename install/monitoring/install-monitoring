@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+#
+# install-monitoring - Install Prometheus + Grafana + Loki + Alertmanager stack
+#
+# Usage:
+#   ./install-monitoring [BASE_DIR]
+#
+# Arguments:
+#   BASE_DIR    Installation directory (default: /opt/monitoring)
+#
+# The script will set proper ownership for the current user.
+#
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="${1:-/opt/monitoring}"
+CURRENT_USER="${SUDO_USER:-$USER}"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
+
+# Check prerequisites
+check_prerequisites() {
+    info "Checking prerequisites..."
+
+    if ! command -v docker &>/dev/null; then
+        error "Docker is not installed"
+    fi
+
+    if ! docker compose version &>/dev/null; then
+        error "Docker Compose v2 is not installed"
+    fi
+
+    # Check if user is in docker group
+    if ! groups "$CURRENT_USER" | grep -q docker; then
+        warn "User '$CURRENT_USER' is not in the docker group"
+        warn "Run: sudo usermod -aG docker $CURRENT_USER"
+    fi
+
+    # Check if Traefik is running
+    if ! docker ps --format '{{.Names}}' | grep -q '^traefik$'; then
+        warn "Traefik container not running. Start it before monitoring."
+    fi
+
+    # Check if proxy network exists
+    if ! docker network ls --format '{{.Name}}' | grep -q '^proxy$'; then
+        warn "Network 'proxy' not found. It will be created when Traefik starts."
+    fi
+}
+
+# Create directory structure
+create_directories() {
+    info "Creating directory structure..."
+
+    sudo mkdir -p "${BASE_DIR}"/{prometheus,grafana/provisioning/{dashboards,datasources},alertmanager,loki,promtail,bin}
+    sudo chown -R "$CURRENT_USER:$CURRENT_USER" "${BASE_DIR}"
+}
+
+# Copy files
+copy_files() {
+    info "Copying configuration files..."
+
+    # Main files
+    cp "${SCRIPT_DIR}/docker-compose.yml" "${BASE_DIR}/"
+    cp "${SCRIPT_DIR}/.env.example" "${BASE_DIR}/"
+
+    # Prometheus
+    cp "${SCRIPT_DIR}/prometheus/prometheus.yml" "${BASE_DIR}/prometheus/"
+    cp "${SCRIPT_DIR}/prometheus/alerts.yml" "${BASE_DIR}/prometheus/"
+
+    # Grafana
+    cp "${SCRIPT_DIR}/grafana/provisioning/datasources/datasource.yml" "${BASE_DIR}/grafana/provisioning/datasources/"
+    cp "${SCRIPT_DIR}/grafana/provisioning/dashboards/dashboard.yml" "${BASE_DIR}/grafana/provisioning/dashboards/"
+    cp "${SCRIPT_DIR}/grafana/provisioning/dashboards/traefik.json" "${BASE_DIR}/grafana/provisioning/dashboards/"
+    cp "${SCRIPT_DIR}/grafana/provisioning/dashboards/loki.json" "${BASE_DIR}/grafana/provisioning/dashboards/"
+
+    # Alertmanager
+    cp "${SCRIPT_DIR}/alertmanager/alertmanager.yml" "${BASE_DIR}/alertmanager/"
+    cp "${SCRIPT_DIR}/alertmanager/docker-entrypoint.sh" "${BASE_DIR}/alertmanager/"
+    chmod +x "${BASE_DIR}/alertmanager/docker-entrypoint.sh"
+
+    # Loki
+    cp "${SCRIPT_DIR}/loki/loki.yml" "${BASE_DIR}/loki/"
+
+    # Promtail
+    cp "${SCRIPT_DIR}/promtail/promtail.yml" "${BASE_DIR}/promtail/"
+
+    # Bin scripts
+    cp "${SCRIPT_DIR}/bin/"* "${BASE_DIR}/bin/" 2>/dev/null || true
+    chmod +x "${BASE_DIR}/bin/"* 2>/dev/null || true
+}
+
+# Set permissions
+set_permissions() {
+    info "Setting permissions..."
+
+    # Grafana container runs as UID 472
+    sudo chown -R 472:472 "${BASE_DIR}/grafana" 2>/dev/null || true
+}
+
+# Create .env
+create_env() {
+    if [[ ! -f "${BASE_DIR}/.env" ]]; then
+        info "Creating .env file..."
+        cp "${BASE_DIR}/.env.example" "${BASE_DIR}/.env"
+        warn "Edit ${BASE_DIR}/.env to configure domains and credentials"
+    else
+        info ".env already exists, skipping"
+    fi
+}
+
+# Print next steps
+print_next_steps() {
+    echo ""
+    echo -e "${GREEN}Installation complete!${NC}"
+    echo ""
+    echo "Next steps:"
+    echo ""
+    echo "1. Configure environment:"
+    echo "   vi ${BASE_DIR}/.env"
+    echo ""
+    echo "2. Generate password hashes:"
+    echo "   htpasswd -nbB admin 'password' | sed 's/\$/\$\$/g'"
+    echo ""
+    echo "3. Start the stack:"
+    echo "   cd ${BASE_DIR} && docker compose up -d"
+    echo ""
+    echo "4. Access Grafana:"
+    echo "   https://\${GRAFANA_DOMAIN}"
+    echo ""
+    echo "Utility scripts available at: ${BASE_DIR}/bin/"
+    echo "  - update-dashboards: Update Grafana dashboards from source"
+    echo ""
+}
+
+# Main
+main() {
+    echo ""
+    echo -e "${GREEN}=== Monitoring Stack Installation ===${NC}"
+    echo "Destination: $BASE_DIR"
+    echo "Owner: $CURRENT_USER"
+    echo ""
+
+    check_prerequisites
+    create_directories
+    copy_files
+    set_permissions
+    create_env
+    print_next_steps
+}
+
+main

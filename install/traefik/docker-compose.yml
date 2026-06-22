@@ -1,0 +1,57 @@
+networks:
+  proxy:
+    external: true
+
+services:
+  traefik:
+    image: traefik:v3.6
+    container_name: traefik
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      # Dashboard protected with Basic Auth and IP Whitelist
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${DASHBOARD_DOMAIN}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls.certresolver=cloudflare"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth,dashboard-whitelist"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${DASHBOARD_USER}"
+      - "traefik.http.middlewares.dashboard-whitelist.ipallowlist.sourcerange=${WHITELIST_IPS}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./conf/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./conf/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./data/acme.json:/acme.json
+      - ./data/logs:/var/log/traefik
+      - ./data/certs:/etc/traefik/certs:ro
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - proxy
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

@@ -19,18 +19,19 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 
 # Save the swap at fstab to load when server restarts
-sudo echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+if ! grep -q "/swapfile swap swap defaults 0 0" /etc/fstab; then
+    echo "/swapfile swap swap defaults 0 0" | sudo tee -a /etc/fstab
+fi
 
 # Show the swap and memory
 sudo swapon --show
 sudo free -h
 
-# Update swappiness [?]
-# cat /proc/sys/vm/swappiness
-# sudo sysctl vm.swappiness=10
-# cat /proc/sys/vm/swappiness
+# Update swappiness for better performance
+sudo sysctl vm.swappiness=10
 
-# In order to make persistent we need to update on /etc/sysctl.conf file
-# option vm.swappiness=10
+# Make it persistent
+echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swappiness.conf
+sudo sysctl --system
 
 exit 0

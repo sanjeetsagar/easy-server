@@ -1,0 +1,158 @@
+# Traefik v3 - Production Configuration
+
+api:
+  dashboard: true
+  insecure: false
+
+# Health check endpoint for container orchestration
+ping:
+  entryPoint: traefik
+
+entryPoints:
+  web:
+    address: ":80"
+    forwardedHeaders:
+      trustedIPs:
+        # Private networks
+        - "127.0.0.1/32"
+        - "10.0.0.0/8"
+        - "172.16.0.0/12"
+        - "192.168.0.0/16"
+        # Cloudflare IPv4 - https://www.cloudflare.com/ips/
+        - "173.245.48.0/20"
+        - "103.21.244.0/22"
+        - "103.22.200.0/22"
+        - "103.31.4.0/22"
+        - "141.101.64.0/18"
+        - "108.162.192.0/18"
+        - "190.93.240.0/20"
+        - "188.114.96.0/20"
+        - "197.234.240.0/22"
+        - "198.41.128.0/17"
+        - "162.158.0.0/15"
+        - "104.16.0.0/13"
+        - "104.24.0.0/14"
+        - "172.64.0.0/13"
+        - "131.0.72.0/22"
+        # Cloudflare IPv6
+        - "2400:cb00::/32"
+        - "2606:4700::/32"
+        - "2803:f800::/32"
+        - "2405:b500::/32"
+        - "2405:8100::/32"
+        - "2a06:98c0::/29"
+        - "2c0f:f248::/32"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+    forwardedHeaders:
+      trustedIPs:
+        # Private networks
+        - "127.0.0.1/32"
+        - "10.0.0.0/8"
+        - "172.16.0.0/12"
+        - "192.168.0.0/16"
+        # Cloudflare IPv4 - https://www.cloudflare.com/ips/
+        - "173.245.48.0/20"
+        - "103.21.244.0/22"
+        - "103.22.200.0/22"
+        - "103.31.4.0/22"
+        - "141.101.64.0/18"
+        - "108.162.192.0/18"
+        - "190.93.240.0/20"
+        - "188.114.96.0/20"
+        - "197.234.240.0/22"
+        - "198.41.128.0/17"
+        - "162.158.0.0/15"
+        - "104.16.0.0/13"
+        - "104.24.0.0/14"
+        - "172.64.0.0/13"
+        - "131.0.72.0/22"
+        # Cloudflare IPv6
+        - "2400:cb00::/32"
+        - "2606:4700::/32"
+        - "2803:f800::/32"
+        - "2405:b500::/32"
+        - "2405:8100::/32"
+        - "2a06:98c0::/29"
+        - "2c0f:f248::/32"
+    http:
+      tls: {}
+  # Internal entrypoint for Prometheus metrics (not exposed publicly)
+  metrics:
+    address: ":8080"
+  # Internal entrypoint for healthcheck ping
+  traefik:
+    address: ":8082"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: proxy
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+# Logging
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  bufferingSize: 100
+  filePath: "/var/log/traefik/access.log"
+  filters:
+    statusCodes:
+      - "400-599"
+
+# TLS Configuration
+serversTransport:
+  insecureSkipVerify: false
+
+# ACME - Certificate Resolvers
+# IMPORTANT: Change the email below to your real email address!
+# Let's Encrypt will reject emails with "example.com" domain.
+certificatesResolvers:
+  bunny:
+    acme:
+      email: "CHANGE-ME@yourdomain.com"
+      storage: "/acme.json"
+      dnsChallenge:
+        provider: bunny
+        delayBeforeCheck: 0
+
+  cloudflare:
+    acme:
+      email: "CHANGE-ME@yourdomain.com"
+      storage: "/acme.json"
+      dnsChallenge:
+        provider: cloudflare
+        delayBeforeCheck: 0
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+
+  le:
+    acme:
+      email: "CHANGE-ME@yourdomain.com"
+      storage: "/acme.json"
+      httpChallenge:
+        entryPoint: web
+
+# Observability - Prometheus Metrics
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+
+# [FUTURE] Tracing
+# tracing:
+#   otlp: {}

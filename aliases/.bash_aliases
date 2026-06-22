@@ -1,8 +1,18 @@
+#!/bin/bash
+
 #---------------------------------------------------------------------
 #
 # Basic Aliases
-# 
+#
 #---------------------------------------------------------------------
+
+# Source .env from easy-server directory
+if [ -f "$HOME/easy-server/.env" ]; then
+    source "$HOME/easy-server/.env"
+else
+    # Fallback para valor padrão se .env não existir
+    ALIAS_HOME_BASE_PATH="/opt"
+fi
 
 # Bash Aliases
 alias l='ls -la'
@@ -33,7 +43,8 @@ alias a='php artisan'
 # Docker
 alias d='docker'
 alias dl='docker ps'
-alias sdl='docker ps --format "table {{.Image}}\t{{.Status}}\t{{.Names}}"'
+alias sdl='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"'
+alias sdla='docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"'
 alias pdl='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
 alias dla='docker ps -a'
 alias dr='docker run'
@@ -93,6 +104,7 @@ alias kdc='kubectl config delete-context'
 
 # Kubernetes actions
 alias kaf='kubectl apply -f'
+
 alias kep='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[0].metadata.name}") -- bash'
 alias kep2='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[1].metadata.name}") -- bash'
 alias kep3='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[2].metadata.name}") -- bash'
@@ -103,6 +115,18 @@ alias kep7='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[6].metadata.
 alias kep8='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[7].metadata.name}") -- bash'
 alias kep9='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[8].metadata.name}") -- bash'
 alias kep10='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[9].metadata.name}") -- bash'
+
+alias kepp='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[0].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp2='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[1].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp3='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[2].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp4='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[3].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp5='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[4].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp6='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[5].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp7='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[6].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp8='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[7].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp9='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[8].metadata.name}") --container eagendas-p-nginx -- bash'
+alias kepp10='kubectl exec -it $(kubectl get pod -o jsonpath="{.items[9].metadata.name}") --container eagendas-p-nginx -- bash'
+
 alias klc='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[0].metadata.name}") -- '
 alias klc2='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[1].metadata.name}") -- '
 alias klc3='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[2].metadata.name}") -- '
@@ -113,6 +137,22 @@ alias klc7='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[6]
 alias klc8='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[7].metadata.name}") -- '
 alias klc9='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[8].metadata.name}") -- '
 alias klc10='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[9].metadata.name}") -- '
+
+alias klcc='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[0].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc1='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[0].metadata.name}") -c $1 -- '
+alias klcc2='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[1].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc3='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[2].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc4='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[3].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc5='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[4].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc6='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[5].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc7='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[6].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc8='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[7].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc9='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[8].metadata.name}") -c eagendas-p-nginx -- '
+alias klcc10='kubectl logs -f --tail 100 $(kubectl get pod -o jsonpath="{.items[9].metadata.name}") -c eagendas-p-nginx -- '
+
+# Scale up and down
+alias scup='kubectl scale --replicas=1 $(kubectl get deployment -o name)'
+alias scdown='kubectl scale --replicas=0 $(kubectl get deployment -o name)'
 
 # Kubens
 alias kb='kubens'
@@ -126,22 +166,23 @@ alias fc='flutter config'
 
 # Apps
 alias tor='cd ~/Downloads/tor && ./start-tor-browser.desktop && cd -'
-alias code='code-insiders'
+
+# Kiro
+alias kiro='kiro-cli chat --tui --trust-all-tools'
 
 # Other Aliases
-ALIAS_HOME_BASE_PATH="~/server"
-
-alias gg='cd $ALIAS_HOME_BASE_PATH'         # Basedir
-alias ggs='cd $ALIAS_HOME_BASE_PATH/sites'  # Sites
-alias ggb='cd $ALIAS_HOME_BASE_PATH/backup' # Backup
-alias ggp='cd $ALIAS_HOME_BASE_PATH/proxy'  # Proxy
-alias ggd='cd $ALIAS_HOME_BASE_PATH/dev'    # Development
+alias gg='cd $ALIAS_HOME_BASE_PATH'             # Basedir
+alias ggs='cd $ALIAS_HOME_BASE_PATH/sites'      # Sites
+alias ggb='cd $ALIAS_HOME_BASE_PATH/backup'     # Backup
+alias ggp='cd $ALIAS_HOME_BASE_PATH/traefik'    # Traefik
+alias ggd='cd $ALIAS_HOME_BASE_PATH/dev'        # Development
 
 # Sail
-alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
+alias sail='bash vendor/bin/sail'
 
 # Rust
 alias c='cargo'
 
 # Auth
 alias auth='auth --cluster $(kubectx -c | cut -f2 -d"@")'
+

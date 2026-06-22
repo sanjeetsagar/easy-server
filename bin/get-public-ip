@@ -1,0 +1,28 @@
+#!/bin/bash
+# Obtém o IP público da máquina
+
+set -e
+
+get_ipv4() {
+    curl -s -4 --max-time 5 https://api.ipify.org 2>/dev/null && return
+    curl -s -4 --max-time 5 https://ifconfig.me 2>/dev/null && return
+    curl -s -4 --max-time 5 https://icanhazip.com 2>/dev/null && return
+    curl -s -4 --max-time 5 https://ipecho.net/plain 2>/dev/null && return
+    echo "Erro: não foi possível obter o IPv4 público" >&2
+    exit 1
+}
+
+get_ipv6() {
+    curl -s -6 --max-time 5 https://api6.ipify.org 2>/dev/null && return
+    curl -s -6 --max-time 5 https://ifconfig.me 2>/dev/null && return
+    curl -s -6 --max-time 5 https://icanhazip.com 2>/dev/null && return
+    return 1
+}
+
+IPV4=$(get_ipv4)
+echo "IPv4: $IPV4"
+
+IPV6=$(get_ipv6 2>/dev/null || true)
+if [ -n "$IPV6" ]; then
+    echo "IPv6: $IPV6"
+fi

@@ -1,0 +1,98 @@
+# Alertmanager Configuration
+#
+# Configure notification receivers (Slack, email, Telegram, etc.)
+#
+# This file supports environment variable substitution via envsubst.
+# Variables like ${TELEGRAM_BOT_TOKEN} are replaced at container startup.
+
+global:
+  resolve_timeout: 5m
+  # Uncomment for email notifications:
+  # smtp_smarthost: '${SMTP_SMARTHOST}'
+  # smtp_from: '${SMTP_FROM}'
+  # smtp_auth_username: '${SMTP_AUTH_USERNAME}'
+  # smtp_auth_password: '${SMTP_AUTH_PASSWORD}'
+
+# Route tree
+route:
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: "default"
+
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: "critical"
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts - batch and notify
+    - match:
+        severity: warning
+      receiver: "warning"
+      group_wait: 5m
+      repeat_interval: 12h
+
+# Receivers
+receivers:
+  - name: "default"
+    # Default receiver - logs only (no external notification)
+    # Add webhook_configs, email_configs, or slack_configs as needed
+
+  - name: "critical"
+    # Uncomment and configure for Slack notifications:
+    # slack_configs:
+    #   - api_url: '${SLACK_WEBHOOK_URL}'
+    #     channel: '${SLACK_CHANNEL}'
+    #     title: '{{ .Status | toUpper }}: {{ .CommonAnnotations.summary }}'
+    #     text: '{{ .CommonAnnotations.description }}'
+    #     send_resolved: true
+
+    # Uncomment for email notifications:
+    # email_configs:
+    #   - to: '${ALERT_EMAIL_TO}'
+    #     send_resolved: true
+
+    # Uncomment for Telegram notifications:
+    # telegram_configs:
+    #   - bot_token: '${TELEGRAM_BOT_TOKEN}'
+    #     chat_id: ${TELEGRAM_CHAT_ID}
+    #     parse_mode: 'HTML'
+    #     message: |
+    #       🚨 <b>{{ .Status | toUpper }}</b>
+    #       <b>Alert:</b> {{ .CommonAnnotations.summary }}
+    #       <b>Description:</b> {{ .CommonAnnotations.description }}
+    #       <b>Severity:</b> {{ .CommonLabels.severity }}
+    #     send_resolved: true
+
+  - name: "warning"
+    # Uncomment and configure for Slack notifications:
+    # slack_configs:
+    #   - api_url: '${SLACK_WEBHOOK_URL}'
+    #     channel: '${SLACK_CHANNEL}'
+    #     title: '{{ .Status | toUpper }}: {{ .CommonAnnotations.summary }}'
+    #     text: '{{ .CommonAnnotations.description }}'
+    #     send_resolved: true
+
+    # Uncomment for Telegram notifications:
+    # telegram_configs:
+    #   - bot_token: '${TELEGRAM_BOT_TOKEN}'
+    #     chat_id: ${TELEGRAM_CHAT_ID}
+    #     parse_mode: 'HTML'
+    #     message: |
+    #       ⚠️ <b>{{ .Status | toUpper }}</b>
+    #       <b>Alert:</b> {{ .CommonAnnotations.summary }}
+    #       <b>Description:</b> {{ .CommonAnnotations.description }}
+    #     send_resolved: true
+
+# Inhibition rules - prevent duplicate alerts
+inhibit_rules:
+  # If critical is firing, suppress warning for same alertname
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname"]

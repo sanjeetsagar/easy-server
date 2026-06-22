@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+#
+# install-traefik - Install Traefik reverse proxy
+#
+# Usage:
+#   ./install-traefik [BASE_DIR]
+#
+# Arguments:
+#   BASE_DIR    Installation directory (default: /opt)
+#
+# The script will create /opt/traefik (or BASE_DIR/traefik) with proper
+# ownership for the current user.
+#
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEST_BASE="${1:-/opt}"
+DEST_DIR="$DEST_BASE/traefik"
+CURRENT_USER="${SUDO_USER:-$USER}"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
+
+# Check prerequisites
+check_prerequisites() {
+    if ! command -v docker &>/dev/null; then
+        error "Docker is not installed"
+    fi
+
+    if ! docker compose version &>/dev/null; then
+        error "Docker Compose v2 is not installed"
+    fi
+
+    # Check if user is in docker group
+    if ! groups "$CURRENT_USER" | grep -q docker; then
+        warn "User '$CURRENT_USER' is not in the docker group"
+        warn "Run: sudo usermod -aG docker $CURRENT_USER"
+    fi
+}
+
+# Check destination
+check_destination() {
+    if [[ ! -d "$DEST_BASE" ]]; then
+        error "Base directory does not exist: $DEST_BASE"
+    fi
+
+    if [[ -d "$DEST_DIR" ]] && [[ -n "$(ls -A "$DEST_DIR" 2>/dev/null)" ]]; then
+        error "Destination not empty: $DEST_DIR (remove manually to reinstall)"
+    fi
+}
+
+# Create directory structure
+create_directories() {
+    info "Creating $DEST_DIR..."
+    sudo mkdir -p "$DEST_DIR"/{conf,data/logs,data/certs,bin}
+    sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$DEST_DIR"
+}
+
+# Copy files
+copy_files() {
+    info "Copying files..."
+
+    cp -r "$SCRIPT_DIR/conf/"* "$DEST_DIR/conf/"
+    cp "$SCRIPT_DIR/docker-compose.yml" "$DEST_DIR/"
+    cp "$SCRIPT_DIR/.env.example" "$DEST_DIR/"
+    cp "$SCRIPT_DIR/.env.example" "$DEST_DIR/.env"
+
+    # Copy bin scripts
+    if [[ -d "$SCRIPT_DIR/bin" ]]; then
+        cp -r "$SCRIPT_DIR/bin/." "$DEST_DIR/bin/"
+        # Make scripts executable (not .env or .yml files)
+        find "$DEST_DIR/bin" -type f ! -name "*.yml" ! -name "*.example" -exec chmod +x {} \;
+    fi
+
+    # Copy data files if they exist
+    [[ -f "$SCRIPT_DIR/data/acme.json" ]] && cp "$SCRIPT_DIR/data/acme.json" "$DEST_DIR/data/"
+
+    # Copy certs README
+    [[ -f "$SCRIPT_DIR/data/certs/README.md" ]] && cp "$SCRIPT_DIR/data/certs/README.md" "$DEST_DIR/data/certs/"
+
+    # Create acme.json if it doesn't exist
+    touch "$DEST_DIR/data/acme.json"
+
+    # Copy README
+    [[ -f "$SCRIPT_DIR/README.md" ]] && cp "$SCRIPT_DIR/README.md" "$DEST_DIR/"
+}
+
+# Set permissions
+set_permissions() {
+    info "Setting permissions..."
+
+    # acme.json must be 600 for Traefik
+    chmod 600 "$DEST_DIR/data/acme.json"
+}
+
+# Create docker network
+create_network() {
+    info "Creating Docker network 'proxy'..."
+    docker network create proxy 2>/dev/null || true
+}
+
+# Print next steps
+print_next_steps() {
+    echo ""
+    echo -e "${GREEN}Installation complete!${NC}"
+    echo ""
+    echo "Next steps:"
+    echo ""
+    echo "1. Configure environment:"
+    echo "   vi $DEST_DIR/.env"
+    echo ""
+    echo -e "2. ${YELLOW}IMPORTANT:${NC} Update ACME email in traefik.yml:"
+    echo "   vi $DEST_DIR/conf/traefik.yml"
+    echo "   (Change CHANGE-ME@yourdomain.com to your real email)"
+    echo ""
+    echo "3. Generate dashboard password:"
+    echo "   $DEST_DIR/bin/gen-password admin"
+    echo ""
+    echo "4. (Optional) Setup Cloudflare Origin Certificate:"
+    echo "   See README.md for instructions"
+    echo "   Place files in: $DEST_DIR/data/certs/"
+    echo ""
+    echo "5. Start Traefik:"
+    echo "   cd $DEST_DIR && docker compose up -d"
+    echo ""
+}
+
+# Main
+main() {
+    echo ""
+    echo -e "${GREEN}=== Traefik Installation ===${NC}"
+    echo "Source: $SCRIPT_DIR"
+    echo "Destination: $DEST_DIR"
+    echo "Owner: $CURRENT_USER"
+    echo ""
+
+    check_prerequisites
+    check_destination
+    create_directories
+    copy_files
+    set_permissions
+    create_network
+    print_next_steps
+}
+
+main
